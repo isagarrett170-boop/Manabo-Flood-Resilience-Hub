@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { BARANGAY_DATA, THEME_COLORS, MAP_PALETTES } from '../constants';
 import { BarangayData } from '../types';
-import { Layers, Info, Image as ImageIcon, Save, UploadCloud, Trash2, CheckCircle2 } from 'lucide-react';
+import { Layers, Info, Image as ImageIcon, Save, UploadCloud, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
 
 // Categories matching Thesis Figures
 type MapCategory = 'FRI' | 'HAZARD' | 'VULNERABILITY' | 'EXPOSURE' | 'SOFT_CM' | 'HARD_CM';
@@ -14,6 +14,7 @@ const MapsGallery: React.FC = () => {
   // Initialize custom images from LocalStorage
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   // Load from local storage on mount
   useEffect(() => {
@@ -28,7 +29,7 @@ const MapsGallery: React.FC = () => {
   }, []);
 
   // Configuration based on Thesis Figures
-  // Note: Removed leading slash from imagePath to support relative base paths
+  // Using absolute paths (starting with /) is standard for assets in the public/ folder
   const categories: { 
     id: MapCategory; 
     label: string; 
@@ -49,7 +50,7 @@ const MapsGallery: React.FC = () => {
       tableRef: 'Table 10.1',
       getValue: (b) => b.fri,
       getRating: (b) => b.riskLevel,
-      imagePath: 'fri_map.png'
+      imagePath: '/fri_map.png'
     },
     { 
       id: 'HAZARD', 
@@ -66,7 +67,7 @@ const MapsGallery: React.FC = () => {
           if (b.hazard > 0.200) return 'Low';
           return 'Very Low';
       },
-      imagePath: 'hazard_map.png'
+      imagePath: '/hazard_map.png'
     },
     { 
       id: 'VULNERABILITY', 
@@ -83,7 +84,7 @@ const MapsGallery: React.FC = () => {
         if (b.vulnerability > 0.200) return 'Low';
         return 'Very Low';
       },
-      imagePath: 'vulnerability_map.png'
+      imagePath: '/vulnerability_map.png'
     },
     { 
       id: 'EXPOSURE', 
@@ -99,7 +100,7 @@ const MapsGallery: React.FC = () => {
         if (b.exposure > 0.200) return 'Low';
         return 'Very Low';
       },
-      imagePath: 'exposure_map.png'
+      imagePath: '/exposure_map.png'
     },
     { 
       id: 'SOFT_CM', 
@@ -110,7 +111,7 @@ const MapsGallery: React.FC = () => {
       tableRef: 'Table 7.2',
       getValue: (b) => b.softCM,
       getRating: (b) => 'Low',
-      imagePath: 'soft_cm_map.png'
+      imagePath: '/soft_cm_map.png'
     },
     { 
       id: 'HARD_CM', 
@@ -125,7 +126,7 @@ const MapsGallery: React.FC = () => {
          if (b.hardCM >= 0.167) return 'Low/Very Low';
          return 'Very Low';
       },
-      imagePath: 'hard_cm_map.png'
+      imagePath: '/hard_cm_map.png'
     },
   ];
 
@@ -176,7 +177,23 @@ const MapsGallery: React.FC = () => {
       const newErrors = { ...imageLoadErrors };
       delete newErrors[activeCategory];
       setImageLoadErrors(newErrors);
+      setRetryTrigger(prev => prev + 1);
   };
+
+  const handleRetryLoad = () => {
+      // Clear error for current category to trigger re-render of img tag
+      const newErrors = { ...imageLoadErrors };
+      delete newErrors[activeCategory];
+      setImageLoadErrors(newErrors);
+      // Increment trigger to force key change if needed
+      setRetryTrigger(prev => prev + 1);
+  };
+
+  // Logic to determine which image source to use
+  const useCustom = !!customImages[activeCategory];
+  const imageSrc = useCustom 
+    ? customImages[activeCategory] 
+    : `${activeCatData.imagePath}?t=${retryTrigger}`; // Add timestamp to bust cache if file changed
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -221,7 +238,7 @@ const MapsGallery: React.FC = () => {
                         className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded flex items-center gap-1 transition-colors"
                         title="Reset to default"
                     >
-                        <Trash2 className="w-3 h-3" /> Reset Map
+                        <Trash2 className="w-3 h-3" /> Reset
                     </button>
                 )}
              </div>
@@ -233,29 +250,41 @@ const MapsGallery: React.FC = () => {
                 onDragOver={handleDragOver}
              >
                 <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                    {customImages[activeCategory] ? (
+                    {/* We use key to force re-mount if category or error state changes */}
+                    {!imageLoadErrors[activeCategory] || useCustom ? (
                         <div className="relative group w-full h-full flex justify-center items-center">
                             <img 
-                                src={customImages[activeCategory]}
-                                alt={`Custom ${activeCatData.label} Map`}
+                                key={`${activeCategory}-${retryTrigger}`}
+                                src={imageSrc}
+                                alt={`${activeCatData.label} Map`}
                                 className="max-w-full max-h-full object-contain shadow-md rounded-lg"
+                                onLoad={() => {
+                                    // Success! ensure error is cleared
+                                    setImageLoadErrors(prev => {
+                                        if (prev[activeCategory]) {
+                                            const newErrors = {...prev};
+                                            delete newErrors[activeCategory];
+                                            return newErrors;
+                                        }
+                                        return prev;
+                                    });
+                                }}
+                                onError={(e) => {
+                                    console.warn(`Failed to load image: ${imageSrc}`);
+                                    // Only set error if we aren't using a custom image that might just need a refresh
+                                    if (!useCustom) {
+                                        setImageLoadErrors(prev => ({...prev, [activeCategory]: true}));
+                                    }
+                                }}
                             />
-                            <div className="absolute bottom-2 right-2">
-                                <span className="bg-emerald-600/90 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 shadow-sm">
-                                    <CheckCircle2 className="w-3 h-3" /> Custom Map Saved
-                                </span>
-                            </div>
+                            {useCustom && (
+                                <div className="absolute bottom-2 right-2">
+                                    <span className="bg-emerald-600/90 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 shadow-sm">
+                                        <CheckCircle2 className="w-3 h-3" /> Custom Map
+                                    </span>
+                                </div>
+                            )}
                         </div>
-                    ) : !imageLoadErrors[activeCategory] ? (
-                        <img 
-                            src={activeCatData.imagePath}
-                            alt={activeCatData.figure}
-                            className="max-w-full max-h-full object-contain shadow-md rounded-lg"
-                            onError={(e) => {
-                                console.warn(`Failed to load image: ${activeCatData.imagePath}`);
-                                setImageLoadErrors(prev => ({...prev, [activeCategory]: true}));
-                            }}
-                        />
                     ) : (
                         // FALLBACK: Image Not Found Placeholder
                         <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 w-full h-full max-h-[300px] hover:bg-slate-100 transition-colors cursor-pointer">
@@ -266,9 +295,17 @@ const MapsGallery: React.FC = () => {
                              <p className="text-xs text-slate-500 max-w-[200px] mb-4">
                                 System could not find <code>{activeCatData.imagePath}</code>.
                              </p>
-                             <div className="flex items-center gap-2 text-xs font-medium text-blue-600 bg-blue-50 px-4 py-2 rounded-lg shadow-sm">
-                                <UploadCloud className="w-4 h-4" />
-                                Drag & Drop Your Map Image Here
+                             <div className="flex flex-col gap-2 w-full max-w-[200px]">
+                                 <button 
+                                    onClick={(e) => { e.stopPropagation(); handleRetryLoad(); }}
+                                    className="flex items-center justify-center gap-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-sm transition-colors"
+                                 >
+                                    <RefreshCw className="w-3 h-3" /> Retry Loading
+                                 </button>
+                                 <div className="flex items-center justify-center gap-2 text-xs font-medium text-blue-600 bg-blue-50 px-4 py-2 rounded-lg shadow-sm">
+                                    <UploadCloud className="w-4 h-4" />
+                                    Or Drag & Drop Image
+                                 </div>
                              </div>
                         </div>
                     )}
@@ -355,11 +392,11 @@ const MapsGallery: React.FC = () => {
                 <p>
                     <strong>Data Source:</strong> 2025 Thesis Tables.
                     <span className="block mt-1 font-medium">
-                        {customImages[activeCategory] ? 
-                            <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Using Custom Map (Saved in Browser)</span> : 
+                        {useCustom ? 
+                            <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Using Custom Map (Browser Storage)</span> : 
                             (!imageLoadErrors[activeCategory] ? 
-                                <span className="text-orange-600">Using System File ({activeCatData.imagePath})</span> : 
-                                <span className="text-slate-400">No map image available. Please drag and drop one.</span>
+                                <span className="text-orange-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> System Map Loaded</span> : 
+                                <span className="text-slate-400">Map file missing</span>
                             )
                         }
                     </span>
