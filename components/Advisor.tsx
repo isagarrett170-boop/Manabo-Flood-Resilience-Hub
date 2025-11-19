@@ -29,9 +29,10 @@ const Advisor: React.FC = () => {
 
     try {
         // Format history for Gemini API
+        // FIX: Added || "" to ensure text is never undefined, resolving TS2345
         const historyForApi = messages.map(msg => ({
             role: msg.role,
-            parts: [{ text: msg.text || "" }] // Fix for TS2345: Ensure text is string
+            parts: [{ text: msg.text || "" }] 
         }));
 
       const responseText = await sendMessageToGemini(input, historyForApi);
