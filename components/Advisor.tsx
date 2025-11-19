@@ -31,7 +31,7 @@ const Advisor: React.FC = () => {
         // Format history for Gemini API
         const historyForApi = messages.map(msg => ({
             role: msg.role,
-            parts: [{ text: msg.text }] // Fix for TS2345: Ensure text is string
+            parts: [{ text: msg.text || "" }] // Fix for TS2345: Ensure text is string
         }));
 
       const responseText = await sendMessageToGemini(input, historyForApi);
@@ -80,7 +80,7 @@ const Advisor: React.FC = () => {
                         : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                 }`}>
                   <div dangerouslySetInnerHTML={{ 
-                      __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>') 
+                      __html: (msg.text || "").replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>') 
                   }} />
                 </div>
             </div>
