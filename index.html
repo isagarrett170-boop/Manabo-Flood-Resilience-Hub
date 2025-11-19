@@ -7,10 +7,6 @@
     <title>Manabo Flood Resilience Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Babel for in-browser transpilation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <style>
       body { font-family: 'Inter', sans-serif; }
       /* Custom scrollbar for dashboard feel */
@@ -28,32 +24,21 @@
         background: #94a3b8;
       }
     </style>
-    <script type="importmap">
-    {
-      "imports": {
-        "react/": "https://aistudiocdn.com/react@^19.2.0/",
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
-        "recharts": "https://aistudiocdn.com/recharts@^3.4.1"
-      }
-    }
-    </script>
-    
-    <!-- Polyfill process.env for Netlify Injection -->
-    <script>
-      window.process = {
-        env: {
-          // This string will be replaced by the sed command in netlify.toml during build
-          API_KEY: "REPLACE_WITH_NETLIFY_API_KEY" 
-        }
-      };
-    </script>
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1"
+  }
+}
+</script>
+</head>
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <!-- Changed type to text/babel and added data-presets for TSX support in browser -->
-    <script type="text/babel" data-type="module" data-presets="react,typescript" src="/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
