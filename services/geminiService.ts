@@ -1,6 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_INSTRUCTION, BARANGAY_DATA } from "../constants";
 
+declare const process: {
+  env: {
+    API_KEY: string;
+  };
+};
+
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const sendMessageToGemini = async (message: string, history: { role: string; parts: { text: string }[] }[] = []) => {

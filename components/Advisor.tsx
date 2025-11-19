@@ -31,7 +31,7 @@ const Advisor: React.FC = () => {
         // Format history for Gemini API
         const historyForApi = messages.map(msg => ({
             role: msg.role,
-            parts: [{ text: msg.text }]
+            parts: [{ text: msg.text }] // Fix for TS2345: Ensure text is string
         }));
 
       const responseText = await sendMessageToGemini(input, historyForApi);
